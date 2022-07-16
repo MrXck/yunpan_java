@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>云盘</title>
+    <script src="/js/jQuery.js"></script>
+    <script src="/js/vue.js"></script>
+    <script src="/js/axios-0.18.0.js"></script>
+    <script src="/js/spark-md5.min.js"></script>
+    <script src="/js/md5.js"></script>
+    <script src="/plugins/elementui/index.js"></script>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/plugins/elementui/index.css" rel="stylesheet">
+    <link href="/css/index.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+<div id="app" style="display: none;" :style="{display: 'block'}">
+    <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 mr-0 px-3" href="">云盘</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-toggle="collapse"
+                data-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <input v-model="query" @keyup.enter="search" class="form-control form-control-dark w-100" type="text"
+               placeholder="Search" aria-label="Search">
+        <ul class="navbar-nav px-3">
+            <li class="nav-item text-nowrap">
+                <a class="nav-link" href="/user/logout">Sign out</a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item" @click="file">
+                            <a :class="tab==1?'nav-link active':'nav-link'" href="#" @click="()=>{tab=1; file_id=0}">
+                                <span data-feather="home"></span>
+                                文件 <span class="sr-only">(current)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" @click="trash">
+                            <a :class="tab==2?'nav-link active':'nav-link'" href="#" @click="()=>{tab=2; file_id=0}">
+                                <span data-feather="home"></span>
+                                回收站 <span class="sr-only">(current)</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div v-show="newDirModal" id="newDir" class="model-box">
+                <div class="content">
+                    <div class="title">
+                        <span>新建文件夹</span>
+                        <i id="newDirClose" @click="newDirModal = false">×</i>
+                    </div>
+                    <form action="" onsubmit="return false">
+                        <div class="form-input">
+                            <label for="username">请输入文件夹名称</label>
+                            <input type="text" v-model="createDirName" id="username"/>
+                        </div>
+                        <div class="form-input">
+                            <button @click="newDir" class="ok">创建</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-show="moveModal" id="move" class="model-box">
+                <div class="content">
+                    <div class="title">
+                        <span>移动到</span>
+                        <i id="moveClose" @click="moveModal = false">×</i>
+                    </div>
+                    <div class="bread">
+                        <div class="bread">
+                            <div @click="inDir(0)" :class="parent_id===0?'to active' : 'to'">文件</div>
+                        </div>
+                        <div class="bread" v-for="(item, index) in dirBreadList" :key="item[0]">
+                            <div class="icon">&nbsp;&nbsp;›&nbsp;&nbsp;</div>
+                            <div @click="inDir(item[0])" :class="parent_id===item[0]?'to active' : 'to'"
+                                 v-text="item[1]"></div>
+                        </div>
+                    </div>
+                    <form action="" onsubmit="return false" class="move-list">
+                        <ul class="moveto">
+                            <li v-for="item in dirMoveList" :key="item.id" @click="inDir(item.id)">
+                                <img src="img/dir.png" alt="">
+                                <span v-text="item.filename"></span>
+                            </li>
+                        </ul>
+                        <div class="form-input">
+                            <button @click="move" class="ok">确定</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-show="deleteModal" id="delete" class="model-box">
+                <div class="content">
+                    <div class="title">
+                        <span>确定删除？</span>
+                        <i id="deleteClose" @click="deleteModal = false">×</i>
+                    </div>
+                    <p>确定删除这<span v-text="operationList.length"></span>项吗？</p>
+                    <form action="" onsubmit="return false">
+                        <div class="form-input">
+                            <button @click="deleteFile" class="ok">确定</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-show="uploadModal" id="upload" class="model-box">
+                <div class="content">
+                    <div class="title">
+                        <span>上传文件</span>
+                        <i id="uploadClose" @click="uploadModal = false">×</i>
+                    </div>
+                    <form action="" onsubmit="return false">
+                        <div class="">
+                            <label for="uploadFiles">请选择文件</label>
+                            <input type="file" id="uploadFiles" multiple>
+                        </div>
+                        <div class="">
+                            <label for="uploadDir">请选择文件夹</label>
+                            <input type="file" id="uploadDir" multiple webkitdirectory>
+                        </div>
+                        <div class="">
+                            <button @click="upload" class="ok">确定</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-show="renameModal" id="rename" class="model-box">
+                <div class="content">
+                    <div class="title">
+                        <span>重命名</span>
+                        <i id="renameClose" @click="renameModal = false">×</i>
+                    </div>
+                    <form action="" onsubmit="return false">
+                        <div class="form-input">
+                            <label for="username">请输入名称</label>
+                            <input type="text" v-model="rename" id="username"/>
+                        </div>
+                        <div class="form-input">
+                            <button @click="renameFile" class="ok">确定</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-show="shareModal" id="share" class="model-box">
+                <div class="content" style="height: 400px;">
+                    <div class="title">
+                        <span>分享</span>
+                        <i id="shareClose" @click="shareModal = false">×</i>
+                    </div>
+                    <form action="" onsubmit="return false">
+                        <div class="form-input">
+                            <label for="username">点击分享后下面出现分享链接</label>
+                            <input type="text" v-model="url" id="username" readonly/>
+                        </div>
+                        <div class="form-input">
+                            <label for="username">分享密码(自动生成)</label>
+                            <input type="text" v-model="password" id="username" readonly/>
+                        </div>
+                        <div class="form-input">
+                            <label for="period">选择分享有效期</label>
+                            <select v-model="sharePeriod" name="" id="period" class="form-control">
+                                <option value="30">30分钟</option>
+                                <option value="60">1小时</option>
+                                <option value="300">5小时</option>
+                                <option value="1440">24小时</option>
+                            </select>
+                        </div>
+                        <div class="form-input">
+                            <button @click="share">分享</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div class="header" role="heading">
+                    <div class="bread">
+                        <div class="bread">
+                            <div @click="to(0)" :class="file_id===0?'to active' : 'to'" v-text="text"></div>
+                        </div>
+                        <div class="bread" v-for="(item, index) in breadList" :key="item[0]">
+                            <div class="icon">&nbsp;&nbsp;›&nbsp;&nbsp;</div>
+                            <div @click="to(item[0])" :class="file_id===item[0]?'to active' : 'to'"
+                                 v-text="item[1]"></div>
+                        </div>
+                    </div>
+                    <div class="operationButton" @click.stop="operationListShow = !operationListShow">操作</div>
+                </div>
+                <div class="head">
+                    <div>
+                        <input id="all" style="margin-top: 10px" type="checkbox" :checked="isAll" @click="allClick">
+                        <label for="all">共<span v-text="total"></span>项</label>
+                    </div>
+                    <div class="operation">
+                        <ul :class="operationListShow?'operationListShow':'operationList'">
+                            <li id="newDirShow" v-show="tab == 1" @click="newDirModal = true">新建文件夹</li>
+                            <li id="uploadShow" v-show="tab == 1" @click="uploadModal = true">上传文件</li>
+                            <li id="moveShow" v-show="tab == 1" @click="getDirList">移动</li>
+                            <li id="deleteShow"
+                                @click="operationList.length > 0 ? deleteModal = true : $message.error('选择文件后再进行此操作')">
+                                删除
+                            </li>
+                            <li v-show="tab == 1"
+                                @click="operationList.length > 0 ? downloadFiles() : $message.error('选择文件后再进行此操作')">下载
+                            </li>
+                            <li id="renameShow" v-show="tab == 1"
+                                @click="operationList.length == 1 ? renameModal = true : $message.error('选择一个文件后再进行此操作')">
+                                重命名
+                            </li>
+                            <li id="shareShow" v-show="tab == 1"
+                                @click="operationList.length > 0 ? shareModal = true : $message.error('选择文件后再进行此操作')">分享
+                            </li>
+                            <li id="restore" v-show="tab == 2"
+                                @click="operationList.length > 0 ? restoreFiles() : $message.error('选择文件后再进行此操作')">
+                                从回收站恢复
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="main">
+                    <div @mousedown.stop="mousedown"
+                         @mouseleave="dragMoveList.splice(dragMoveList.indexOf(item.id), 99)"
+                         @mouseover="dragMoveList.push(item.id)" @drop.stop="dragMove(item)" draggable="true"
+                         v-for="item in fileList" :key="item.id" class="item" @click="getFileList(item)">
+                        <input class="checkbox" type="checkbox" @click.stop="appendOrRemoveClass" v-model="operationList" :value="item.id">
+                        <img ondragstart="return false" class="file" v-if="item.filetype == 0"
+                             src="/img/文件.png" alt="">
+                        <img ondragstart="return false" class="dir" v-if="item.filetype == 1"
+                             src="/img/dir.png" alt="">
+                        <p class="filename" v-text="filterStr(item.filename)"></p>
+                        <p v-text="formatDate(item.create_time)" class="datetime"></p>
+                    </div>
+                    <div id="selectDiv" style="position:absolute;width:0;height:0;font-size:0;margin:0;padding:0;border:1px solid #0099FF;background-color:#C3D5ED;z-index:1000;filter:alpha(opacity:60);opacity:0.6;display:none;"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+
+<div class="my_progress hidden">
+</div>
+
+<div class="template hidden" style="margin: 10px">
+    <p><span class="file_name"></span><span class="file_size"></span></p>
+    <div class="progress">
+        <div class="progress-bar progress-bar-animated" style=""></div>
+    </div>
+</div>
+
+<script src="js/bootstrap.bundle.min.js"></script>
+<script>
+    const vm = new Vue({
+        el: '#app',
+        data: {
+            file_id: 0,
+            fileList: [],
+            operationList: [],
+            dragMoveList: [],
+            dirMoveList: [],
+            dirBreadList: [],
+            breadList: [],
+            tab: 1,
+            operationListShow: false,
+            createDirName: '',
+            parent_id: 0,
+            query: '',
+            text: '文件',
+            status: 1,
+            rename: '',
+            url: '',
+            sharePeriod: 1440,
+            password: '',
+            moveModal: false,
+            deleteModal: false,
+            renameModal: false,
+            shareModal: false,
+            newDirModal: false,
+            uploadModal: false,
+        },
+        methods: {
+            init() {
+                this.operationList = []
+                this.dragMoveList = []
+                axios.post("/file/file", {file_id: this.file_id, status: this.status}, {headers: {'Content-Type': 'application/json;charset=UTF-8'}}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.fileList = res.data.data
+                        this.breadList = res.data.bread
+                    }
+                })
+            },
+            formatDate(date) {
+                return date.replace('T', ' ').replace('-', '/').replace('-', '/').split('.')[0]
+            },
+            filterStr(str) {
+                if (str.length > 11) {
+                    return str.substring(0, 11) + '...'
+                }
+                return str
+            },
+            to(file_id) {
+                this.file_id = file_id
+                this.init()
+            },
+            getFileList(item) {
+                if (item.filetype === 0) {
+                    path = "/file/download/" + item.id
+                    let link = document.createElement("a");
+                    link.style.display = "none";
+                    link.href = path;
+                    link.download = item.filename;
+                    link.click();
+                } else {
+                    this.file_id = item.id
+                    this.init()
+                }
+            },
+            allClick(e) {
+                var checkbox = $('input[type="checkbox"]')
+                if (e.target.checked) {
+                    checkbox.prop("checked", e.target.checked)
+                    for (let i = 1; i < checkbox.length; i++) {
+                        this.operationList.push(checkbox.eq(i).val())
+                    }
+                } else {
+                    this.operationList = []
+                }
+            },
+            newDir() {
+                axios.post("/file/create", {file_id: this.file_id, dir_name: this.createDirName}, {headers: {'Content-Type': 'application/json;charset=UTF-8'}})
+                    .then((res) => {
+                        if (res.data.code === 0) {
+                            this.$message.success(res.data.message)
+                        } else {
+                            this.$message.error(res.data.message)
+                        }
+                    })
+                    .finally(() => {
+                        this.init()
+                        this.newDirModal = false
+                    })
+            },
+            move() {
+                axios.post("/move/move", {
+                    operationList: this.operationList,
+                    parent_id: this.parent_id
+                }, {headers: {'Content-Type': 'application/json;charset=UTF-8'}}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.$message.success(res.data.message)
+                    } else {
+                        this.$message.error(res.data.message)
+                    }
+                }).finally(() => {
+                    this.init()
+                    this.moveModal = false
+                })
+            },
+            getDirList() {
+                if (this.operationList.length < 1) {
+                    this.$message.error('请选择文件后再进行此操作')
+                    return
+                }
+                this.moveModal = true
+                axios.post("/move/dirlist", {parent_id: this.parent_id}, {headers: {'Content-Type': 'application/json;charset=UTF-8'}}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.dirMoveList = res.data.data
+                        this.dirBreadList = res.data.bread
+                    }
+                })
+            },
+            inDir(id) {
+                this.parent_id = id
+                this.getDirList()
+            },
+            deleteFile() {
+                axios.post("/file/delete", {operationList: this.operationList}, {headers: {'Content-Type': 'application/json;charset=UTF-8'}}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.$message.success(res.data.message)
+                    } else {
+                        this.$message.error(res.data.message)
+                    }
+                }).finally(() => {
+                    this.init()
+                    this.deleteModal = false
+                })
+            },
+            search() {
+                this.operationList = []
+                axios.post("/file/search", {query: this.query}, {headers: {'Content-Type': 'application/json;charset=UTF-8'}}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.breadList = []
+                        this.fileList = res.data.data
+                    }
+                })
+            },
+            downloadFiles() {
+                path = "/file/download_files?operationList=" + this.operationList
+                let link = document.createElement("a");
+                link.style.display = "none";
+                link.href = path;
+                let id = this.operationList[0]
+                let filename = '';
+                for (let i = 0; i < this.fileList.length; i++) {
+                    if (this.fileList[i].id == id) {
+                        filename = this.fileList[i].filename
+                    }
+                }
+                link.download = `${filename}等${this.operationList.length}个文件.zip`;
+                link.click();
+            },
+            upload() {
+                let uploadDir = document.getElementById("uploadDir")
+                let uploadFiles = document.getElementById("uploadFiles")
+                for (let i = 0; i < uploadDir.files.length; i++) {
+                    if (uploadDir.files[i].size > 1024 * 1024 * 100) {
+                        this.bigFile(uploadDir.files[i])
+                    } else {
+                        this.upload_file(uploadDir.files[i])
+                    }
+                }
+                for (let i = 0; i < uploadFiles.files.length; i++) {
+                    if (uploadFiles.files[i].size > 1024 * 1024 * 100) {
+                        this.bigFile(uploadFiles.files[i])
+                    } else {
+                        this.upload_file(uploadFiles.files[i])
+                    }
+                }
+                this.uploadModal = false
+            },
+            file() {
+                this.text = '文件'
+                this.status = 1
+                this.init()
+            },
+            trash() {
+                this.text = '回收站'
+                this.status = 0
+                this.init()
+            },
+            renameFile() {
+                axios.get("/file/rename", {
+                    params: {
+                        operationList: this.operationList[0],
+                        rename: this.rename,
+                        parent_id: this.file_id
+                    }
+                }).then((res) => {
+                    if (res.data.code === 0) {
+                        this.$message.success(res.data.message)
+                    } else {
+                        this.$message.error(res.data.message)
+                    }
+                }).finally(() => {
+                    this.init()
+                    this.renameModal = false
+                })
+            },
+            share() {
+                axios.post("/share/share", {
+                    operationList: this.operationList,
+                    period: this.sharePeriod
+                }, {headers: {'Content-Type': 'application/json;charset=UTF-8'}}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.url = res.data.url
+                        this.password = res.data.password
+                    }
+                })
+            },
+            bigFile: async function (file) {
+                let md;
+                const changeBuffer = file => {
+                    return new Promise(resolve => {
+                        let fileReader = new FileReader();
+                        fileReader.readAsArrayBuffer(file);
+                        fileReader.onload = ev => {
+                            let buffer = ev.target.result,
+                                spark = new SparkMD5.ArrayBuffer(),
+                                HASH,
+                                suffix;
+                            spark.append(buffer);
+                            HASH = spark.end();
+                            let fileArray = new Int8Array(fileReader.result)
+                            let fileHead = fileArray.subarray(0, 10)
+                            let fileFoot = fileArray.subarray(fileArray.length - 11, fileArray.length - 1)
+                            let value = `${fileHead.join('')}${fileFoot.join('')}${file.size}`
+                            md = hex_md5(value)
+                            suffix = /\.([a-zA-Z0-9]+)$/.exec(file.name)[1];
+                            resolve({
+                                buffer,
+                                HASH,
+                                suffix,
+                                filename: `${HASH}.${suffix}`
+                            });
+                        };
+                    });
+                };
+                // 获取文件的HASH
+                let already = [],
+                    data = null,
+                    {
+                        HASH,
+                        suffix
+                    } = await changeBuffer(file);
+
+                // 获取已经上传的切片信息
+                try {
+                    data = await instance.get('/upload/upload_already', {
+                        params: {
+                            HASH,
+                            filename: file.name,
+                            parent_id: this.file_id,
+                            file_hash: md
+                        }
+                    }).finally(() => {
+                        this.init()
+                    });
+                    if (+data.code === 0) {
+                        already = data.fileList;
+                    } else if (+data.code === 2) {
+                        let progress = $('.template').clone();
+                        progress.removeClass('hidden');
+                        progress.removeClass('template');
+                        progress.find('.file_name').text(file.name);
+                        let filesize = file.size;
+                        if (filesize > 1024 * 1024) {
+                            filesize = (filesize / 1024 / 1024).toFixed(2) + ' MB'
+                        } else {
+                            filesize = (filesize / 1024).toFixed(2) + ' KB'
+                        }
+                        progress.find('.file_size').text(filesize);
+                        let progress_bar = progress.find('.progress-bar');
+                        let my_progress = $('.my_progress');
+                        my_progress.append(progress);
+                        my_progress.removeClass('hidden')
+                        progress_bar.css('width', `100%`);
+                        progress_bar.text(`100%`);
+                        this.$message.success(data.message)
+                        return
+                    } else {
+                        this.$message.error(data.message)
+                        return
+                    }
+                } catch (err) {
+                }
+
+                // 实现文件切片处理 「固定数量 & 固定大小」
+                let max = 1024 * 100,
+                    count = Math.ceil(file.size / max),
+                    index = 0,
+                    chunks = [];
+                if (count > 100) {
+                    max = file.size / 100;
+                    count = 100;
+                }
+                while (index < count) {
+                    chunks.push({
+                        file: file.slice(index * max, (index + 1) * max),
+                        filename: `${HASH}_${index + 1}.${suffix}`
+                    });
+                    index++;
+                }
+                // 上传成功的处理
+                index = 0;
+
+                let progress = $('.template').clone();
+                progress.removeClass('hidden');
+                progress.removeClass('template');
+                progress.find('.file_name').text(file.name);
+                let filesize = file.size;
+                if (filesize > 1024 * 1024) {
+                    filesize = (filesize / 1024 / 1024).toFixed(2) + ' MB'
+                } else {
+                    filesize = (filesize / 1024).toFixed(2) + ' KB'
+                }
+                progress.find('.file_size').text(filesize);
+                let progress_bar = progress.find('.progress-bar');
+                let my_progress = $('.my_progress');
+                my_progress.append(progress);
+                my_progress.removeClass('hidden')
+                const complate = async () => {
+                    // 管控进度条
+                    index++;
+                    progress_bar.css('width', `${index / count * 100}%`);
+                    progress_bar.text(`${index / count * 100}%`);
+
+                    // 当所有切片都上传成功，我们合并切片
+                    if (index < count) return;
+                    progress_bar.css('width', `100%`);
+                    progress_bar.text(`100%`);
+                    try {
+                        axios.get('/upload/upload_merge?HASH=' + HASH + '&count=' + count + '&parent_id=' + this.file_id + '&filename=' + file.name + '&file_hash=' + md).then((data) => {
+                            if (data.data.code === 0 || data.data.code === 2) {
+                                this.$message.success(data.data.message)
+                            } else {
+                                this.$message.error(data.data.message)
+                            }
+                        }).finally(() => {
+                            this.init()
+                        });
+
+                    } catch (err) {
+                    }
+                };
+
+                // 把每一个切片都上传到服务器上
+                chunks.forEach(chunk => {
+                    // 已经上传的无需在上传
+                    if (already.length > 0 && already.includes(chunk.filename)) {
+                        complate();
+                        return;
+                    }
+                    let fm = new FormData;
+                    fm.append(chunk.filename, chunk.file);
+                    instance.post('/upload/upload_chunk', fm, {headers: {'Content-Type': 'multipart/form-data'}}).then(data => {
+                        if (+data.code === 0) {
+                            complate();
+                            return;
+                        }
+                        return Promise.reject(data.codeText);
+                    }).catch(() => {
+                    });
+                });
+            },
+            async upload_file(file) {
+                fileReader = new FileReader();
+                fileReader.readAsArrayBuffer(file);
+                let md;
+                fileReader.onload = ev => {
+                    let fileArray = new Int8Array(fileReader.result)
+                    let fileHead = fileArray.subarray(0, 10)
+                    let fileFoot = fileArray.subarray(fileArray.length - 11, fileArray.length - 1)
+                    let value = `${fileHead.join('')}${fileFoot.join('')}${file.size}`
+                    md = hex_md5(value)
+                    axios.get("/upload/upload_already?filename=" + file.name + '&file_hash=' + md + '&parent_id=' + this.file_id, {}).then((data) => {
+                        if (data.data.code === 0) {
+                            const param = new FormData();
+                            param.append("file", file)
+                            let progress = $('.template').clone();
+                            progress.removeClass('hidden');
+                            progress.removeClass('template');
+                            progress.find('.file_name').text(file.name);
+                            let filesize = file.size;
+                            if (filesize > 1024 * 1024) {
+                                filesize = (filesize / 1024 / 1024).toFixed(2) + ' MB'
+                            } else {
+                                filesize = (filesize / 1024).toFixed(2) + ' KB'
+                            }
+                            progress.find('.file_size').text(filesize);
+                            let progress_bar = progress.find('.progress-bar');
+                            let my_progress = $('.my_progress');
+                            my_progress.append(progress);
+                            my_progress.removeClass('hidden')
+                            file_axios = axios.create();
+                            let fileReader = new FileReader();
+                            fileReader.readAsArrayBuffer(file);
+                            fileReader.onload = ev => {
+                                let buffer = ev.target.result,
+                                    spark = new SparkMD5.ArrayBuffer(),
+                                    HASH;
+                                spark.append(buffer);
+                                HASH = spark.end();
+                                file_axios({
+                                    url: "/upload/upload?parent_id=" + this.file_id + '&hash=' + HASH + '&file_hash=' + md,
+                                    method: 'post',
+                                    headers: {"Content-Type": "multipart/form-data"},
+                                    data: param,
+                                    onUploadProgress: function (progressEvent) {
+                                        if (progressEvent.lengthComputable) {
+                                            if (progressEvent.loaded !== progressEvent.total) {
+                                                progress_bar.css('width', `${progressEvent.loaded / progressEvent.total * 100}%`);
+                                                progress_bar.text(`${progressEvent.loaded / progressEvent.total * 100}%`);
+                                            } else {
+                                                progress_bar.css('width', `100%`);
+                                                progress_bar.text(`100%`);
+                                            }
+                                        }
+                                    }
+                                }).then((res) => {
+                                    if (res.data.code === 0) {
+                                        this.$message.success(res.data.message)
+                                    } else {
+                                        progress.remove()
+                                        this.$message.error(res.data.message)
+                                    }
+                                }).finally(() => {
+                                    this.init()
+                                })
+                            }
+                        } else if (data.data.code === 2) {
+                            let progress = $('.template').clone();
+                            progress.removeClass('hidden');
+                            progress.removeClass('template');
+                            progress.find('.file_name').text(file.name);
+                            let filesize = file.size;
+                            if (filesize > 1024 * 1024) {
+                                filesize = (filesize / 1024 / 1024).toFixed(2) + ' MB'
+                            } else {
+                                filesize = (filesize / 1024).toFixed(2) + ' KB'
+                            }
+                            progress.find('.file_size').text(filesize);
+                            let progress_bar = progress.find('.progress-bar');
+                            let my_progress = $('.my_progress');
+                            my_progress.append(progress);
+                            my_progress.removeClass('hidden')
+                            progress_bar.css('width', `100%`);
+                            progress_bar.text(`100%`);
+                            this.$message.success(data.data.message)
+                        } else {
+                            this.$message.error(data.data.message)
+                        }
+                    }).finally(() => {
+                        this.init()
+                    })
+                };
+            },
+            restoreFiles() {
+                axios.get('/file/restore_files?operationList=' + this.operationList).then((res) => {
+                    if (res.data.code === 0) {
+                        this.$message.success(res.data.message)
+                    } else {
+                        this.$message.error(res.data.message)
+                    }
+                }).finally(() => {
+                    this.init()
+                })
+            },
+            dragMove(item) {
+                if (item.filetype === 1) {
+                    let operationList = []
+                    operationList = this.dragMoveList
+                    axios.get("/move/drag_move?operationList=" + operationList + '&parent_id=' + item.id, {}).then((res) => {
+                        if (res.data.code === 0) {
+                            this.$message.success(res.data.message)
+                        } else {
+                            this.$message.error(res.data.message)
+                        }
+                    }).finally(() => {
+                        this.init()
+                    })
+                }
+            },
+            mousedown() {
+                return false;
+            },
+            appendOrRemoveClass(event){
+                $(event.target).parent().toggleClass('seled')
+            }
+        },
+        created() {
+            this.init()
+        },
+        computed: {
+            total() {
+                return this.fileList.length
+            },
+            isAll() {
+                return (this.fileList.length === this.operationList.length) && this.fileList.length > 0
+            },
+        }
+    })
+</script>
+<script src="/js/index.js"></script>
+</body>
+</html>

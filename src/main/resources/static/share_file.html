@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
+    <meta name="generator" content="Hugo 0.88.1">
+    <title>云盘</title>
+    <script src="/js/jQuery.js"></script>
+    <script src="/js/vue.js"></script>
+    <script src="/js/axios-0.18.0.js"></script>
+    <script src="/plugins/elementui/index.js"></script>
+    <link href="/plugins/elementui/index.css" rel="stylesheet">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <link href="/css/share.css" rel="stylesheet">
+</head>
+<body>
+<div id="app" style="display: none;" :style="{display: 'block'}">
+    <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 mr-0 px-3" href="#">云盘</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-toggle="collapse"
+                data-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <ul class="navbar-nav px-3">
+            <li class="nav-item text-nowrap">
+                <a class="nav-link" href="/user/logout">Sign out</a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item" @click="file">
+                            <a :class="tab==1?'nav-link active':'nav-link'" href="#" @click="tab=1">
+                                <span data-feather="home"></span>
+                                文件 <span class="sr-only">(current)</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div v-show="moveModal" id="move" class="model-box">
+                <div class="content">
+                    <div class="title">
+                        <span>收藏到</span>
+                        <i id="moveClose" @click="moveModal = false">×</i>
+                    </div>
+                    <div class="bread">
+                        <div class="bread">
+                            <div @click="inDir(0)" :class="parent_id===0?'to active' : 'to'">文件</div>
+                        </div>
+                        <div class="bread" v-for="(item, index) in dirBreadList" :key="item[0]">
+                            <div class="icon">&nbsp;&nbsp;›&nbsp;&nbsp;</div>
+                            <div @click="inDir(item[0])" :class="parent_id===item[0]?'to active' : 'to'"
+                                 v-text="item[1]"></div>
+                        </div>
+                    </div>
+                    <form action="" onsubmit="return false" class="move-list">
+                        <ul class="moveto">
+                            <li v-for="item in dirMoveList" :key="item.id" @click="inDir(item.id)">
+                                <img src="/img/dir.png" alt="">
+                                <span v-text="item.filename"></span>
+                            </li>
+                        </ul>
+                        <div class="form-input">
+                            <button @click="move" class="ok">确定</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div class="header" role="heading">
+                    <div class="bread">
+                        <div class="bread">
+                            <div @click="to(0)" :class="file_id===0?'to active' : 'to'" v-text="text"></div>
+                        </div>
+                        <div class="bread" v-for="(item, index) in breadList" :key="item[0]">
+                            <div class="icon">&nbsp;&nbsp;›&nbsp;&nbsp;</div>
+                            <div @click="to(item[0])" :class="file_id===item[0]?'to active' : 'to'"
+                                 v-text="item[1]"></div>
+                        </div>
+                    </div>
+                    <div class="operationButton" @click.stop="operationListShow = !operationListShow">操作</div>
+                </div>
+                <div class="head">
+                    <div>
+                        <input id="all" style="margin-top: 10px" type="checkbox" :checked="isAll" @click="allClick">
+                        <label for="all">共<span v-text="total"></span>项</label>
+                    </div>
+                    <div class="operation">
+                        <ul :class="operationListShow?'operationListShow':'operationList'">
+                            <li id="moveShow" @click="getDirList">收藏</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="main">
+                    <div v-for="item in fileList" :key="item.id" class="item" @click="getFileList(item)">
+                        <input class="checkbox" type="checkbox" @click.stop="appendOrRemoveClass" v-model="operationList" :value="item.id">
+                        <img class="file" v-if="item.filetype == 0" src="/img/文件.png" alt="">
+                        <img class="dir" v-if="item.filetype == 1" src="/img/dir.png" alt="">
+                        <p class="filename" v-text="filterStr(item.filename)"></p>
+                        <p v-text="formatDate(item.create_time)" class="datetime"></p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+<script src="/js/bootstrap.bundle.min.js"></script>
+<script>
+    const vm = new Vue({
+        el: '#app',
+        data: {
+            file_id: 0,
+            fileList: [],
+            operationList: [],
+            dirMoveList: [],
+            dragMoveList: [],
+            dirBreadList: [],
+            breadList: [],
+            moveModal: false,
+            tab: 1,
+            operationListShow: false,
+            parent_id: 0,
+            text: '文件',
+        },
+        methods: {
+            init() {
+                this.operationList = []
+                axios.post("", {file_id: this.file_id}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.fileList = res.data.data
+                        this.breadList = res.data.bread
+                    }
+                })
+            },
+            formatDate(date) {
+                return date.replace('T', ' ').replace('-', '/').replace('-', '/').split('.')[0]
+            },
+            filterStr(str) {
+                if (str.length > 11) {
+                    return str.substring(0, 11) + '...'
+                }
+                return str
+            },
+            to(file_id) {
+                this.file_id = file_id
+                this.init()
+            },
+            getFileList(item) {
+                if (item.filetype === 0) {
+                    path = "/file/download/" + item.id
+                    let link = document.createElement("a");
+                    link.style.display = "none";
+                    link.href = path;
+                    link.download = item.filename;
+                    link.click();
+                } else {
+                    this.file_id = item.id
+                    this.init()
+                }
+            },
+            allClick(e) {
+                var checkbox = $('input[type="checkbox"]')
+                checkbox.prop("checked", e.target.checked)
+                for (let i = 1; i < checkbox.length; i++) {
+                    this.operationList.push(checkbox.eq(i).val())
+                }
+            },
+            move() {
+                axios.post("/share/get_share_files", {
+                    operationList: this.operationList,
+                    parent_id: this.parent_id
+                }).then((res) => {
+                    if(res.data.code === 0){
+                        this.$message.success(res.data.message)
+                    }else {
+                        this.$message.error(res.data.message)
+                    }
+                }).finally(() => {
+                    this.init()
+                    this.moveModal = false
+                })
+            },
+            getDirList() {
+                this.moveModal = true
+                axios.post("/move/dirlist", {file_id: this.file_id, parent_id: this.parent_id}).then((res) => {
+                    if (res.data.code === 0) {
+                        this.dirMoveList = res.data.data
+                        this.dirBreadList = res.data.bread
+                    }
+                })
+            },
+            inDir(id) {
+                this.parent_id = id
+                this.getDirList()
+            },
+            file() {
+                this.text = '文件'
+                this.status = 1
+                this.init()
+            },
+            appendOrRemoveClass(event){
+                $(event.target).parent().toggleClass('seled')
+            }
+        },
+        created() {
+            this.init()
+        },
+        computed: {
+            total() {
+                return this.fileList.length
+            },
+            isAll() {
+                return this.fileList.length === this.operationList.length && this.fileList.length > 0
+            }
+        }
+    })
+
+    window.addEventListener('click', () => {
+        vm.operationListShow = false;
+    })
+
+
+
+
+</script>
+
+<script src="/js/share.js"></script>
+</body>
+</html>

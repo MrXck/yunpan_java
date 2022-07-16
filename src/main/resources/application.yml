@@ -1,0 +1,26 @@
+server:
+  port: 8080
+spring:
+  mvc:
+    view:
+      prefix: /
+  application:
+    name: file
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://127.0.0.1:3306/file
+    username: root
+    password: 123
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    jdbc-type-for-null: 'null'
+  global-config:
+    db-config:
+      id-type: auto

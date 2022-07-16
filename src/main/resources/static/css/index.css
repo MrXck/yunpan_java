@@ -1,0 +1,323 @@
+.bd-placeholder-img {
+    font-size: 1.125rem;
+    text-anchor: middle;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+@media (min-width: 768px) {
+    .bd-placeholder-img-lg {
+        font-size: 3.5rem;
+    }
+}
+
+html {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    min-height: 100%;
+}
+
+.main {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 10px;
+    align-content: flex-start;
+    overflow: auto;
+    position: relative;
+}
+
+.item {
+    width: 123px;
+    height: 162px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+}
+
+.item p{
+    margin-bottom: 0;
+}
+
+.item:hover {
+    background-color: #f1f1f1;
+}
+
+.item .datetime {
+    font-size: 12px;
+    color: #bdbdbd;
+}
+
+.item .dir {
+    width: 100%;
+}
+
+.item .file {
+    width: 96px;
+}
+
+.item .checkbox {
+    cursor: pointer;
+    position: relative;
+    left: -40%;
+    top: 2%;
+}
+
+.itemActive {
+    background-color: #f1f1f1;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    font-size: 20px;
+}
+
+.bread {
+    display: flex;
+    align-items: center;
+}
+
+.bread .to {
+    cursor: pointer;
+    color: #b4b4b6;
+}
+
+.bread .icon {
+    color: #b4b4b6;
+}
+
+.bread .active {
+    color: black;
+    font-weight: bold;
+}
+
+.head {
+    display: flex;
+    justify-content: space-between;
+}
+
+.operationList {
+    list-style: none;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 2px 2px 10px 2px #c6c6c6;
+    padding: 0;
+    display: none;
+    position: absolute;
+    right: 2%;
+}
+
+.operationList li {
+    height: 40px;
+    line-height: 40px;
+    width: 150px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.operationList li:hover {
+    background-color: #eaeaea;
+}
+
+.operationButton {
+    cursor: pointer;
+}
+
+.operationListShow {
+    list-style: none;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 2px 2px 10px 2px #c6c6c6;
+    padding: 0;
+    position: absolute;
+    right: 2%;
+    z-index: 100;
+}
+
+.operationListShow li {
+    height: 40px;
+    line-height: 40px;
+    width: 150px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.operationListShow li:hover {
+    background-color: #eaeaea;
+}
+
+.moveto {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.moveto li {
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 5px;
+    display: flex;
+}
+
+.moveto li:hover {
+    background-color: #eaeaea;
+}
+
+.moveto img {
+    margin: 10px 10px;
+    height: 20px;
+}
+
+
+button {
+    outline: 0;
+    width: 100px;
+    height: 40px;
+    color: #409eff;
+    border-radius: 4px;
+    border: 1px solid #b3d8ff;
+    background-color: #ecf5ff;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+button:hover {
+    color: #fff;
+    border-color: #409eff;
+    background-color: #409eff;
+}
+
+.model-box {
+    position: fixed;
+    top: 30px;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: 999;
+}
+
+.model-box .content {
+    position: absolute;
+    top: 100px;
+    left: calc(50% - 210px);
+    width: 420px;
+    max-height: 400px;
+    min-height: 250px;
+    border-radius: 5px;
+    padding: 0 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    background-color: #fff;
+}
+
+.model-box .content .title {
+    display: flex;
+    justify-content: space-between;
+    height: 60px;
+    line-height: 60px;
+}
+
+.model-box .content .title span {
+    font-size: 18px;
+    color: #333;
+}
+
+.model-box .content .title i {
+    font-style: normal;
+    font-size: 24px;
+    color: #909399;
+    cursor: pointer;
+}
+
+.model-box .content .title i:hover {
+    color: #409eff;
+}
+
+.model-box .content form .form-input {
+    margin: 10px 10px;
+}
+
+.model-box .content form .form-input label {
+    font-size: 14px;
+    color: #606266;
+    cursor: pointer;
+}
+
+.model-box .content form .form-input input {
+    outline: 0;
+    width: 100%;
+    height: 42px;
+    padding: 0 15px;
+    margin-top: 20px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+}
+
+.model-box .content form .form-input input:hover {
+    border-color: #c0c4cc;
+}
+
+.model-box .content form .form-input input:focus {
+    border-color: #409eff;
+}
+
+.model-box .content form .form-input button {
+    float: right;
+    margin-top: 10px;
+}
+
+
+#sidebarMenu {
+    font-size: 20px;
+}
+
+.my_progress {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    max-height: 300px;
+    overflow: auto;
+    box-shadow: 0 0 1px 1px rgba(28, 28, 32, .05), 0 8px 24px rgba(28, 28, 32, .12);
+    border: 1px solid rgba(132, 133, 141, 0.08);
+    border-radius: 5px;
+}
+
+.my_progress p {
+    width: 100%;
+}
+
+.file_name {
+    position: relative;
+    left: 10px;
+}
+
+.file_size {
+    position: relative;
+    left: 5%;
+}
+
+.hidden {
+    display: none;
+}
+
+.move-list ul{
+    max-height: 200px;
+    overflow: auto;
+}
+
+.seled {
+    background-color: #D6DFF7!important;
+}
