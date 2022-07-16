@@ -19,7 +19,7 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
-    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     jdbc-type-for-null: 'null'
   global-config:
     db-config:

@@ -1,4 +1,4 @@
-package com.yunpan.controller.config;
+package com.yunpan.config;
 
 import com.yunpan.interceptor.LoginInterceptor;
 import org.springframework.context.annotation.Configuration;
